@@ -52,7 +52,6 @@ public class Server extends JFrame {
 				}
 			}
 		});	
-		Receive();
 		
 	}
 	public Server() {
@@ -153,12 +152,21 @@ public class Server extends JFrame {
 		JLabel lblMessageRecv = new JLabel("Message recv");
 		lblMessageRecv.setBounds(10, 214, 83, 14);
 		contentPane.add(lblMessageRecv);
+		
+		JButton Receive = new JButton("Receive");
+		Receive.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				Receive();
+			}
+		});
+		Receive.setBounds(306, 158, 89, 23);
+		contentPane.add(Receive);
 	}
 	
 	public void Receive() {
-		int port = 9888;  // Port on which the server listens
-		//int port = Integer.parseInt(Port_Field.getText());
-		
+		//int port = 9888;  // Port on which the server listens
+		int port = Integer.parseInt(Port_Field.getText());
+		System.out.println("ffffffffffffffffffffffffff");
 		 try (DatagramSocket socket = new DatagramSocket(port)) {
 	            byte[] receiveBuffer = new byte[1024];
 	            System.out.println("Server is listening on port "+port+"..");
@@ -188,5 +196,4 @@ public class Server extends JFrame {
 	public int getport() {
 		return Integer.parseInt(Port_Field.getText());
 	}
-	
 }

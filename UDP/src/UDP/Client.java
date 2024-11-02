@@ -26,7 +26,7 @@ public class Client extends JFrame {
 	private JTextField Msg_sent_Field;
 	private JTextField Msg_recv_Field;
 	
-	Server22 s = new Server22();
+	Server s = new Server();
 
 	/**
 	 * Launch the application.

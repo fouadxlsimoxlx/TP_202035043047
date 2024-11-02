@@ -18,7 +18,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-public class Server extends JFrame {
+public class Server22 extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 	private JPanel contentPane;
@@ -44,7 +44,7 @@ public class Server extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					Server frame = new Server();
+					Server22 frame = new Server22();
 					
 					frame.setVisible(true);
 				} catch (Exception e) {
@@ -55,7 +55,7 @@ public class Server extends JFrame {
 		Receive();
 		
 	}
-	public Server() {
+	public Server22() {
 		setTitle("Server");
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

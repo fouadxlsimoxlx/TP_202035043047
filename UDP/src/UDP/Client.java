@@ -25,6 +25,8 @@ public class Client extends JFrame {
 	private JTextField IP_send_Field;
 	private JTextField Msg_sent_Field;
 	private JTextField Msg_recv_Field;
+	
+	Server22 s = new Server22();
 
 	/**
 	 * Launch the application.
@@ -87,7 +89,27 @@ public class Client extends JFrame {
 		JButton Send_Button = new JButton("Send");
 		Send_Button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				work();
+				try (DatagramSocket socket = new DatagramSocket()) {
+		            String message = Msg_sent_Field.getText();
+		            byte[] sendBuffer = message.getBytes();
+		            InetAddress serverAddress = InetAddress.getByName(IP_recv_Field.getText());
+		            int serverPort = s.getport();
+
+		            // Send message to server
+		            DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, serverAddress, serverPort);
+		            socket.send(sendPacket);
+		            System.out.println("Message sent to server: " + message);
+
+		            // Receive response from server
+		            /*byte[] receiveBuffer = new byte[1024];
+		            DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+		            socket.receive(receivePacket);
+		            String serverResponse = new String(receivePacket.getData(), 0, receivePacket.getLength());
+		            System.out.println("Response from server: " + serverResponse);
+		            */
+		        } catch (Exception e) {
+		            e.printStackTrace();
+		        }
 				/*
 				////////////// first field
 				int[] IP_dec_send = new int[4];
@@ -149,28 +171,12 @@ public class Client extends JFrame {
 		contentPane.add(lblMessageRecv);
 	}
 	
+	public int getport() {
+		return Integer.parseInt(Port_Field.getText());
+	}
+	
 	public void work() {
-		try (DatagramSocket socket = new DatagramSocket()) {
-            String message = Msg_sent_Field.getText();
-            byte[] sendBuffer = message.getBytes();
-            InetAddress serverAddress = InetAddress.getByName("localhost");
-            int serverPort = 6789;
-
-            // Send message to server
-            DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, serverAddress, serverPort);
-            socket.send(sendPacket);
-            System.out.println("Message sent to server: " + message);
-
-            // Receive response from server
-            /*byte[] receiveBuffer = new byte[1024];
-            DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
-            socket.receive(receivePacket);
-            String serverResponse = new String(receivePacket.getData(), 0, receivePacket.getLength());
-            System.out.println("Response from server: " + serverResponse);
-            */
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		
 	}
 
 }

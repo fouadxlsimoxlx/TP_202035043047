@@ -6,14 +6,14 @@ public class Main {
 		// TODO Auto-generated method stub
 		// Creating a thread for the Server
 	    Thread serverThread = new Thread(() -> {
-	        Server s = new Server();
+	        Server22 s = new Server22();
 	        System.out.println("server:");
 	        s.start();
 	    });
 
 	    // Creating a thread for the Client
 	    Thread clientThread = new Thread(() -> {
-	        Client c = new Client();
+	        Client22 c = new Client22();
 	        System.out.println("client:");
 	        c.start();
 	    });

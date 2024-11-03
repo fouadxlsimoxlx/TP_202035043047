@@ -12,6 +12,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 
 public class Client extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -22,6 +23,7 @@ public class Client extends JFrame {
     private JTextField Msg_sent_Field;
     private JTextArea Msg_recv_Field;  // Changed JTextField to JTextArea
     public Server s = new Server();
+    private JTextField Port_recv_field;
 
     public Client() {
         setTitle("Client");
@@ -60,7 +62,19 @@ public class Client extends JFrame {
                 send();
             }
         });
-        IP_send_Field.setText("127.0.0.1");
+        try {
+            // Get the local IP address
+            InetAddress localHost = InetAddress.getLocalHost();
+            String localIp = localHost.getHostAddress();
+            
+            // Set the IP address in the text field
+            IP_send_Field.setText(localIp);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            // Handle the error, e.g., set a default value or show a message
+            IP_send_Field.setText("Unable to retrieve IP address");
+        }
+        //IP_send_Field.setText("127.0.0.1");
         Port_Field.setText("8989");
 
         Send_Button.setBounds(103, 158, 89, 23);
@@ -96,6 +110,15 @@ public class Client extends JFrame {
         JLabel lblMessageRecv = new JLabel("Message recv");
         lblMessageRecv.setBounds(10, 214, 83, 14);
         contentPane.add(lblMessageRecv);
+        
+        Port_recv_field = new JTextField();
+        Port_recv_field.setColumns(10);
+        Port_recv_field.setBounds(328, 96, 67, 20);
+        contentPane.add(Port_recv_field);
+        
+        JLabel lblPortRecv = new JLabel("Port recv");
+        lblPortRecv.setBounds(256, 99, 62, 14);
+        contentPane.add(lblPortRecv);
     }
 
     // Method to send messages to the server
@@ -104,7 +127,7 @@ public class Client extends JFrame {
             String message = Msg_sent_Field.getText();
             byte[] sendBuffer = message.getBytes();
             InetAddress serverAddress = InetAddress.getByName(IP_recv_Field.getText());
-            int serverPort = s.GetPort();
+            int serverPort = Integer.parseInt(Port_recv_field.getText());
 
             DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, serverAddress, serverPort);
             socket.send(sendPacket);

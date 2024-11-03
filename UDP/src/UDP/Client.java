@@ -21,7 +21,7 @@ public class Client extends JFrame {
     private JTextField IP_recv_Field;
     private JTextField IP_send_Field;
     private JTextField Msg_sent_Field;
-    private JTextArea Msg_recv_Field;  // Changed JTextField to JTextArea
+    private JTextArea Msg_recv_Field; 
     public Server s = new Server();
     private JTextField Port_recv_field;
 
@@ -75,7 +75,7 @@ public class Client extends JFrame {
             IP_send_Field.setText("Unable to retrieve IP address");
         }
         //IP_send_Field.setText("127.0.0.1");
-        Port_Field.setText("8989");
+        //Port_Field.setText("8989");
 
         Send_Button.setBounds(103, 158, 89, 23);
         contentPane.add(Send_Button);
@@ -123,6 +123,12 @@ public class Client extends JFrame {
 
     // Method to send messages to the server
     public void send() {
+    	if (Port_recv_field.getText().isEmpty() ) {
+    		JOptionPane.showMessageDialog(null, "fill Port of the server", "Error", JOptionPane.ERROR_MESSAGE);
+    	}
+    	else if (Msg_sent_Field.getText().isEmpty()) {
+    		JOptionPane.showMessageDialog(null, "write a message", "Error", JOptionPane.ERROR_MESSAGE);
+    	}else {
         try (DatagramSocket socket = new DatagramSocket()) {
             String message = Msg_sent_Field.getText();
             byte[] sendBuffer = message.getBytes();
@@ -135,11 +141,12 @@ public class Client extends JFrame {
             Msg_sent_Field.setText("");
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }}
     }
 
-    public void Receive() {
-        int port = Integer.parseInt(Port_Field.getText());
+    public void Receive(int port) {
+        //int port = Integer.parseInt(Port_Field.getText());
+        Port_Field.setText(Integer.toString(port));
         try (DatagramSocket socket = new DatagramSocket(port)) {
             byte[] receiveBuffer = new byte[1024];
             System.out.println("Client is listening on port " + port + "..");

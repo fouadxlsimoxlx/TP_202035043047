@@ -21,7 +21,7 @@ public class Server extends JFrame {
     private JTextField IP_recv_Field;
     private JTextField IP_send_Field;
     private JTextField Msg_sent_Field;
-    private JTextArea Msg_recv_Field;  // Changed JTextField to JTextArea
+    private JTextArea Msg_recv_Field;  
     private JTextField Port_recv_field;
 
     public Server() {
@@ -75,7 +75,7 @@ public class Server extends JFrame {
             IP_send_Field.setText("Unable to retrieve IP address");
         }
         //IP_send_Field.setText("127.0.0.1");
-        Port_Field.setText("9999");
+        //Port_Field.setText("9999");
 
         Send_Button.setBounds(103, 158, 89, 23);
         contentPane.add(Send_Button);
@@ -111,26 +111,24 @@ public class Server extends JFrame {
         lblMessageRecv.setBounds(10, 214, 83, 14);
         contentPane.add(lblMessageRecv);
 
-        JButton Recv_Button = new JButton("Receive");
-        Recv_Button.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                Receive();
-            }
-        });
-        Recv_Button.setBounds(306, 158, 89, 23);
-        contentPane.add(Recv_Button);
         
-        JLabel lblPort_1 = new JLabel("Port");
-        lblPort_1.setBounds(259, 99, 46, 14);
+        JLabel lblPort_1 = new JLabel("Port recv");
+        lblPort_1.setBounds(259, 99, 62, 14);
         contentPane.add(lblPort_1);
         
         Port_recv_field = new JTextField();
         Port_recv_field.setColumns(10);
-        Port_recv_field.setBounds(315, 96, 80, 20);
+        Port_recv_field.setBounds(331, 96, 64, 20);
         contentPane.add(Port_recv_field);
     }
 
     public void send() {
+    	if (Port_recv_field.getText().isEmpty() ) {
+    		JOptionPane.showMessageDialog(null, "fill Port of the server", "Error", JOptionPane.ERROR_MESSAGE);
+    	}
+    	else if (Msg_sent_Field.getText().isEmpty()) {
+    		JOptionPane.showMessageDialog(null, "write a message", "Error", JOptionPane.ERROR_MESSAGE);
+    	}else {
         try (DatagramSocket socket = new DatagramSocket()) {
             String message = Msg_sent_Field.getText();
             byte[] sendBuffer = message.getBytes();
@@ -143,12 +141,13 @@ public class Server extends JFrame {
             Msg_sent_Field.setText("");
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }}
     }
 
     // Method to receive messages from the client
-    public void Receive() {
-        int port = Integer.parseInt(Port_Field.getText());
+    public void Receive(int port) {
+        //int port = Integer.parseInt(Port_Field.getText());
+    	Port_Field.setText(Integer.toString(port));
         try (DatagramSocket socket = new DatagramSocket(port)) {
             byte[] receiveBuffer = new byte[1024];
             System.out.println("Server is listening on port " + port + "..");

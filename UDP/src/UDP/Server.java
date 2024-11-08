@@ -4,14 +4,13 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
 import java.awt.Desktop;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 
 public class Server extends JFrame {
@@ -125,11 +124,24 @@ public class Server extends JFrame {
                     JOptionPane.showMessageDialog(null, "Please enter a port number to receive messages.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
+
                 int port;
                 try {
                     port = Integer.parseInt(Port_Field.getText().trim());
                 } catch (NumberFormatException e) {
                     JOptionPane.showMessageDialog(null, "Invalid port number. Please enter a valid integer.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // Check if the port is available
+                try (DatagramSocket socket = new DatagramSocket(port)) {
+                    // If the port is free, close the socket and proceed
+                    socket.close();
+                } catch (BindException e) {
+                    JOptionPane.showMessageDialog(null, "Port " + port + " is already in use. Please choose another port.", "Port Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(null, "An error occurred while checking the port availability.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
                 Port_Field.setEditable(false);

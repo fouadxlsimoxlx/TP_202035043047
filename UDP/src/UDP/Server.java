@@ -45,7 +45,6 @@ public class Server extends JFrame {
         IP_send_Field.setColumns(10);
 
         Port_Field = new JTextField();
-        Port_Field.setEditable(false);
         Port_Field.setBounds(103, 65, 86, 20);
         contentPane.add(Port_Field);
         Port_Field.setColumns(10);
@@ -80,13 +79,11 @@ public class Server extends JFrame {
         Send_Button.setBounds(103, 158, 89, 23);
         contentPane.add(Send_Button);
 
-        // Initialize and configure JTextArea for Msg_recv_Field
         Msg_recv_Field = new JTextArea();
         Msg_recv_Field.setEditable(false);
         Msg_recv_Field.setLineWrap(true);
         Msg_recv_Field.setWrapStyleWord(true);
 
-        // Use JScrollPane to enable scrolling
         JScrollPane scrollPane = new JScrollPane(Msg_recv_Field);
         scrollPane.setBounds(103, 192, 292, 58);
         contentPane.add(scrollPane);
@@ -120,7 +117,38 @@ public class Server extends JFrame {
         Port_recv_field.setColumns(10);
         Port_recv_field.setBounds(331, 96, 64, 20);
         contentPane.add(Port_recv_field);
+        
+        JButton Connect_btn = new JButton("Connect");
+        Connect_btn.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        		if (Port_Field.getText().isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Please enter a port number to receive messages.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                int port;
+                try {
+                    port = Integer.parseInt(Port_Field.getText().trim());
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Invalid port number. Please enter a valid integer.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                Port_Field.setEditable(false);
+                Connect_btn.setEnabled(false);
+                new Thread(() -> Receive(port)).start();     
+        	}
+        });
+        Msg_sent_Field.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) {
+                    send();
+                }
+            }
+        });
+        
+        Connect_btn.setBounds(306, 158, 89, 23);
+        contentPane.add(Connect_btn);
     }
+    
 
     public void send() {
     	if (Port_recv_field.getText().isEmpty() ) {
@@ -144,7 +172,6 @@ public class Server extends JFrame {
         }}
     }
 
-    // Method to receive messages from the client
     public void Receive(int port) {
         //int port = Integer.parseInt(Port_Field.getText());
     	Port_Field.setText(Integer.toString(port));
@@ -157,32 +184,28 @@ public class Server extends JFrame {
                 socket.receive(receivePacket);
                 String clientMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
                 System.out.println("Received from client: " + clientMessage);
-                String google = "www.google.com";
                 
-                if (clientMessage.equals(google)) {
-                    try {
-                        URI website = new URI("www.google.com");
-                        if (Desktop.isDesktopSupported()) {
-                            Desktop desktop = Desktop.getDesktop();
-                            desktop.browse(website);
-                        } else {
-                            System.out.println("Desktop is not supported on this platform.");
-                        }
-                    } catch (URISyntaxException | IOException e) {
-                        e.printStackTrace();
-                    }
-                } else {
+                
+                if (clientMessage.equals("google") || clientMessage.equals("www.google.com")) {
+                	URI website = new URI("www.google.com");
+                	Desktop desktop = Desktop.getDesktop();
+                    desktop.browse(website);
+                } else if (clientMessage.equals("university") || clientMessage.equals("mohamed khider")){
+                	URI website = new URI("https://univ-biskra.dz/index.php/ar/");
+                	Desktop desktop = Desktop.getDesktop();
+                    desktop.browse(website);
+                }
+                else if (clientMessage.equals("translator") || clientMessage.equals("google translator")){
+                	URI website = new URI("https://translate.google.com/");
+                	Desktop desktop = Desktop.getDesktop();
+                    desktop.browse(website);
+                }
+                else {
                     SwingUtilities.invokeLater(() -> Msg_recv_Field.append(clientMessage + "\n"));
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public int GetPort() {
-        int port;
-        port = Integer.parseInt(Port_Field.getText());
-        return port;
     }
 }

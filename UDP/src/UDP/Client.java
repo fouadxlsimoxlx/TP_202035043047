@@ -46,7 +46,6 @@ public class Client extends JFrame {
         IP_send_Field.setColumns(10);
 
         Port_Field = new JTextField();
-        Port_Field.setEditable(false);
         Port_Field.setBounds(103, 65, 86, 20);
         contentPane.add(Port_Field);
         Port_Field.setColumns(10);
@@ -119,6 +118,31 @@ public class Client extends JFrame {
         JLabel lblPortRecv = new JLabel("Port recv");
         lblPortRecv.setBounds(256, 99, 62, 14);
         contentPane.add(lblPortRecv);
+        
+        JButton Connect_btn = new JButton("Connect");
+        Connect_btn.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        		if (Port_Field.getText().isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Please enter a port number to receive messages.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                int port;
+                try {
+                    port = Integer.parseInt(Port_Field.getText().trim());
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Invalid port number. Please enter a valid integer.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // Start the Receive method in a separate thread
+                Port_Field.setEditable(false);
+                Connect_btn.setEnabled(false);
+                new Thread(() -> Receive(port)).start();            
+        	}
+        });
+        Connect_btn.setBounds(306, 158, 89, 23);
+        contentPane.add(Connect_btn);
     }
 
     // Method to send messages to the server
@@ -146,7 +170,7 @@ public class Client extends JFrame {
 
     public void Receive(int port) {
         //int port = Integer.parseInt(Port_Field.getText());
-        Port_Field.setText(Integer.toString(port));
+        //Port_Field.setText(Integer.toString(port));
         try (DatagramSocket socket = new DatagramSocket(port)) {
             byte[] receiveBuffer = new byte[1024];
             System.out.println("Client is listening on port " + port + "..");

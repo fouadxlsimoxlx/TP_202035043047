@@ -8,10 +8,22 @@ import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-
+import java.net.SocketTimeoutException;
 import java.awt.Desktop;
 import java.net.URI;
 import java.net.UnknownHostException;
+
+import java.awt.Rectangle;
+import java.awt.Robot;
+import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import javax.imageio.ImageIO;
+import javax.swing.SwingUtilities;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Server extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -135,7 +147,6 @@ public class Server extends JFrame {
 
                 // Check if the port is available
                 try (DatagramSocket socket = new DatagramSocket(port)) {
-                    // If the port is free, close the socket and proceed
                     socket.close();
                 } catch (BindException e) {
                     JOptionPane.showMessageDialog(null, "Port " + port + " is already in use. Please choose another port.", "Port Error", JOptionPane.ERROR_MESSAGE);
@@ -185,34 +196,63 @@ public class Server extends JFrame {
     }
 
     public void Receive(int port) {
-        //int port = Integer.parseInt(Port_Field.getText());
-    	Port_Field.setText(Integer.toString(port));
+        Port_Field.setText(Integer.toString(port));
         try (DatagramSocket socket = new DatagramSocket(port)) {
-            byte[] receiveBuffer = new byte[1024];
+            byte[] receiveBuffer = new byte[65535];
             System.out.println("Server is listening on port " + port + "..");
 
             while (true) {
                 DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
                 socket.receive(receivePacket);
                 String clientMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                System.out.println("Received from client: " + clientMessage);
-                
-                
+
+                // Get the sender's IP and port
+                String senderIP = receivePacket.getAddress().getHostAddress();
+                int senderPort = receivePacket.getPort();
+
                 if (clientMessage.equals("google") || clientMessage.equals("www.google.com")) {
-                	URI website = new URI("www.google.com");
-                	Desktop desktop = Desktop.getDesktop();
-                    desktop.browse(website);
-                } else if (clientMessage.equals("university") || clientMessage.equals("mohamed khider")){
-                	URI website = new URI("https://univ-biskra.dz/index.php/ar/");
-                	Desktop desktop = Desktop.getDesktop();
-                    desktop.browse(website);
-                }
-                else if (clientMessage.equals("translator") || clientMessage.equals("google translator")){
-                	URI website = new URI("https://translate.google.com/");
-                	Desktop desktop = Desktop.getDesktop();
-                    desktop.browse(website);
-                }
-                else {
+                    Desktop.getDesktop().browse(new URI("https://www.google.com"));
+                } else if (clientMessage.equals("university") || clientMessage.equals("mohamed khider")) {
+                    Desktop.getDesktop().browse(new URI("https://univ-biskra.dz/index.php/ar/"));
+                } else if (clientMessage.equals("translator") || clientMessage.equals("google translator")) {
+                    Desktop.getDesktop().browse(new URI("https://translate.google.com/"));
+                } else if (clientMessage.equals("screenshoot") || clientMessage.equals("sc")) {
+                    // C2 receives screenshot request and sends screenshot back to C1
+                    System.out.println("Screenshot request received from " + senderIP);
+                    takeScreenshotAndSend(senderIP, Integer.parseInt(Port_recv_field.getText()));
+                    //takeScreenshotAndSend(senderIP, senderPort);
+                } else if (clientMessage.equals("IMG_START")) {
+                    // C1 is receiving the image data
+                    ByteArrayOutputStream imageStream = new ByteArrayOutputStream();
+                    System.out.println("Receiving image data...");
+
+                    socket.setSoTimeout(3000); // Timeout after 3 seconds of inactivity
+                    while (true) {
+                        try {
+                            socket.receive(receivePacket);
+                            String receivedData = new String(receivePacket.getData(), 0, receivePacket.getLength());
+
+                            // Check for end signal
+                            if (receivedData.equals("IMG_END")) {
+                                System.out.println("Image transfer complete.");
+                                socket.setSoTimeout(0); 
+                                break;
+                            }
+
+                            // Check for image data
+                            if (receivedData.startsWith("IMG:")) {
+                                imageStream.write(receivePacket.getData(), 4, receivePacket.getLength() - 4);
+                            }
+                        } catch (SocketTimeoutException e) {
+                            System.out.println("Image reception timeout reached, but saving the received image.");
+                            break;
+                        }
+                    }
+
+                    byte[] imageData = imageStream.toByteArray();
+                    saveReceivedImage(imageData,senderIP);
+                } else {
+                    System.out.println("Received from client: " + clientMessage);
                     SwingUtilities.invokeLater(() -> Msg_recv_Field.append(clientMessage + "\n"));
                 }
             }
@@ -220,4 +260,84 @@ public class Server extends JFrame {
             e.printStackTrace();
         }
     }
+
+    
+    public static void saveReceivedImage(byte[] imageData, String senderIP) {
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
+            BufferedImage receivedImage = ImageIO.read(bais);
+
+            if (receivedImage == null) {
+                System.out.println("Failed to decode image. The received data may be corrupted.");
+                return;
+            }
+
+            // Create the directory to save the image
+            String directoryPath = "C:\\Users\\dmc\\Desktop\\udp_received_images";
+            File directory = new File(directoryPath);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            // Generate a filename with the sender IP and timestamp
+            String sanitizedIP = senderIP.replace(".", "_"); // Replace dots with underscores for a valid filename
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String filename = directoryPath + File.separator + "received_image_" + sanitizedIP + "_" + timestamp + ".png";
+            File outputfile = new File(filename);
+
+            // Save the image
+            ImageIO.write(receivedImage, "png", outputfile);
+            System.out.println("Image saved at: " + outputfile.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    
+    public static void takeScreenshotAndSend(String ipAddress, int port) {
+        try {
+            Robot robot = new Robot();
+            Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
+            BufferedImage screenshot = robot.createScreenCapture(screenRect);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(screenshot, "png", baos);
+            byte[] imageData = baos.toByteArray();
+
+            DatagramSocket socket = new DatagramSocket();
+            int packetSize = 64000;
+            byte[] header = "IMG:".getBytes();
+
+            // Send start signal
+            byte[] startSignal = "IMG_START".getBytes();
+            DatagramPacket startPacket = new DatagramPacket(startSignal, startSignal.length, InetAddress.getByName(ipAddress), port);
+            socket.send(startPacket);
+
+            // Send image data in chunks
+            for (int i = 0; i < imageData.length; i += packetSize) {
+                int length = Math.min(packetSize, imageData.length - i);
+                byte[] dataChunk = new byte[header.length + length];
+
+                // Add header
+                System.arraycopy(header, 0, dataChunk, 0, header.length);
+                // Copy image data
+                System.arraycopy(imageData, i, dataChunk, header.length, length);
+
+                DatagramPacket packet = new DatagramPacket(dataChunk, dataChunk.length, InetAddress.getByName(ipAddress), port);
+                socket.send(packet);
+            }
+
+            // Send end-of-image signal
+            byte[] endSignal = "IMG_END".getBytes();
+            DatagramPacket endPacket = new DatagramPacket(endSignal, endSignal.length, InetAddress.getByName(ipAddress), port);
+            socket.send(endPacket);
+
+            System.out.println("Screenshot sent successfully to " + ipAddress + ":" + port);
+            socket.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }

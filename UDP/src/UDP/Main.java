@@ -23,7 +23,7 @@ public class Main {
         });
 
         S1T.start();       
-        S2T.start();
+        //S2T.start();
         //S3T.start();
     }
 }

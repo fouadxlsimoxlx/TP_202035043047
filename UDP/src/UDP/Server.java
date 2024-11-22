@@ -9,6 +9,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
+import java.awt.Color;
 import java.awt.Desktop;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -157,6 +158,8 @@ public class Server extends JFrame {
                 }
                 Port_Field.setEditable(false);
                 Connect_btn.setEnabled(false);
+                Connect_btn.setBackground(Color.GREEN);
+                //Connect_btn.setForeground(Color.WHITE);
                 new Thread(() -> Receive(port)).start();     
         	}
         });
@@ -272,26 +275,34 @@ public class Server extends JFrame {
                 return;
             }
 
-            // Create the directory to save the image
-            String directoryPath = "C:\\Users\\dmc\\Desktop\\udp_received_images";
+            String desktopPath = System.getProperty("user.home") + File.separator + "Desktop";
+            String directoryPath = desktopPath + File.separator + "udp_received_images";
             File directory = new File(directoryPath);
+
             if (!directory.exists()) {
-                directory.mkdirs();
+                if (directory.mkdirs()) {
+                    System.out.println("Directory created at: " + directoryPath);
+                } else {
+                    System.out.println("Failed to create directory. Check permissions.");
+                    return;
+                }
             }
 
-            // Generate a filename with the sender IP and timestamp
-            String sanitizedIP = senderIP.replace(".", "_"); // Replace dots with underscores for a valid filename
+            
+            String sanitizedIP = senderIP.replace(".", "_"); 
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             String filename = directoryPath + File.separator + "received_image_" + sanitizedIP + "_" + timestamp + ".png";
             File outputfile = new File(filename);
 
-            // Save the image
             ImageIO.write(receivedImage, "png", outputfile);
             System.out.println("Image saved at: " + outputfile.getAbsolutePath());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+
+
 
 
     

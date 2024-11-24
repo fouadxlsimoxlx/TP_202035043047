@@ -21,6 +21,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
 import java.text.SimpleDateFormat;
@@ -35,11 +37,12 @@ public class Server extends JFrame {
     private JTextField Msg_sent_Field;
     private JTextArea Msg_recv_Field;  
     private JTextField Port_recv_field;
+    public static String statpic;
 
     public Server() {
         setTitle("Server");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 450, 300);
+        setBounds(100, 100, 456, 432);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
         setContentPane(contentPane);
@@ -80,6 +83,7 @@ public class Server extends JFrame {
             
             // Set the IP address in the text field
             IP_send_Field.setText(localIp);
+            IP_recv_Field.setText(localIp);
         } catch (UnknownHostException e) {
             e.printStackTrace();
             // Handle the error, e.g., set a default value or show a message
@@ -97,7 +101,7 @@ public class Server extends JFrame {
         Msg_recv_Field.setWrapStyleWord(true);
 
         JScrollPane scrollPane = new JScrollPane(Msg_recv_Field);
-        scrollPane.setBounds(103, 192, 292, 58);
+        scrollPane.setBounds(103, 192, 292, 120);
         contentPane.add(scrollPane);
 
         JLabel lblNewLabel = new JLabel("IP");
@@ -158,7 +162,8 @@ public class Server extends JFrame {
                 }
                 Port_Field.setEditable(false);
                 Connect_btn.setEnabled(false);
-                Connect_btn.setBackground(Color.GREEN);
+                //Connect_btn.setBackground(Color.GREEN);
+                Connect_btn.setBackground(new Color(0, 150, 0));
                 //Connect_btn.setForeground(Color.WHITE);
                 new Thread(() -> Receive(port)).start();     
         	}
@@ -212,8 +217,10 @@ public class Server extends JFrame {
                 // Get the sender's IP and port
                 String senderIP = receivePacket.getAddress().getHostAddress();
                 int senderPort = receivePacket.getPort();
-
-                if (clientMessage.equals("google") || clientMessage.equals("www.google.com")) {
+                
+                if ((clientMessage.startsWith("www.") || clientMessage.startsWith("https://")) && clientMessage.endsWith(".com")) {
+                    Desktop.getDesktop().browse(new URI(clientMessage));
+                } else if (clientMessage.equals("google") || clientMessage.equals("www.google.com")) {
                     Desktop.getDesktop().browse(new URI("https://www.google.com"));
                 } else if (clientMessage.equals("university") || clientMessage.equals("mohamed khider")) {
                     Desktop.getDesktop().browse(new URI("https://univ-biskra.dz/index.php/ar/"));
@@ -223,38 +230,70 @@ public class Server extends JFrame {
                     // C2 receives screenshot request and sends screenshot back to C1
                     System.out.println("Screenshot request received from " + senderIP);
                     takeScreenshotAndSend(senderIP, Integer.parseInt(Port_recv_field.getText()));
-                    //takeScreenshotAndSend(senderIP, senderPort);
                 } else if (clientMessage.equals("IMG_START")) {
                     // C1 is receiving the image data
                     ByteArrayOutputStream imageStream = new ByteArrayOutputStream();
                     System.out.println("Receiving image data...");
 
-                    socket.setSoTimeout(3000); // Timeout after 3 seconds of inactivity
-                    while (true) {
-                        try {
-                            socket.receive(receivePacket);
-                            String receivedData = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                    try {
+                        socket.setSoTimeout(3000); // Timeout after 3 seconds of inactivity
+                        int packetCount = 0;
 
-                            // Check for end signal
-                            if (receivedData.equals("IMG_END")) {
-                                System.out.println("Image transfer complete.");
-                                socket.setSoTimeout(0); 
+                        while (true) {
+                            try {
+                                // Receive a packet
+                                socket.receive(receivePacket);
+                                byte[] receivedData = receivePacket.getData();
+                                int length = receivePacket.getLength();
+
+                                // Check for end signal
+                                String receivedText = new String(receivedData, 0, length);
+                                if (receivedText.equals("IMG_END")) {
+                                    System.out.println("Image transfer complete.");
+                                    SwingUtilities.invokeLater(() -> Msg_recv_Field.append("Image transfer complete.\n"));
+                                    break;
+                                }
+
+                                // Check for image data and ensure it starts with "IMG:"
+                                if (length > 4 && receivedText.startsWith("IMG:")) {
+                                    // Extract the actual image data after the "IMG:" header
+                                    imageStream.write(receivedData, 4, length - 4);
+                                    packetCount++;
+
+                                    // Send acknowledgment back to the sender for this packet
+                                    String ackMessage = "ACK:" + packetCount;
+                                    DatagramPacket ackPacket = new DatagramPacket(
+                                        ackMessage.getBytes(),
+                                        ackMessage.length(),
+                                        receivePacket.getAddress(),
+                                        receivePacket.getPort()
+                                    );
+                                    socket.send(ackPacket);
+                                }
+
+                            } catch (SocketTimeoutException e) {
+                                System.out.println("Timeout reached. Saving the received image so far...");
+                                SwingUtilities.invokeLater(() -> Msg_recv_Field.append("Error Image not received\n"));
                                 break;
                             }
-
-                            // Check for image data
-                            if (receivedData.startsWith("IMG:")) {
-                                imageStream.write(receivePacket.getData(), 4, receivePacket.getLength() - 4);
-                            }
-                        } catch (SocketTimeoutException e) {
-                            System.out.println("Image reception timeout reached, but saving the received image.");
-                            break;
                         }
-                    }
 
-                    byte[] imageData = imageStream.toByteArray();
-                    saveReceivedImage(imageData,senderIP);
-                } else {
+                        // Convert the received data into an image
+                        byte[] imageData = imageStream.toByteArray();
+                        imageStream.close();
+
+                        // Save the received image
+                        saveReceivedImage(imageData, senderIP);
+                        SwingUtilities.invokeLater(() -> Msg_recv_Field.append(statpic+"\n"));
+
+                    } catch (IOException e) {
+                        System.err.println("Error while receiving image data: " + e.getMessage());
+                        e.printStackTrace();
+                    } finally {
+                        socket.setSoTimeout(0); // Reset the timeout
+                    }
+                }
+                else {
                     System.out.println("Received from client: " + clientMessage);
                     SwingUtilities.invokeLater(() -> Msg_recv_Field.append(clientMessage + "\n"));
                 }
@@ -263,6 +302,7 @@ public class Server extends JFrame {
             e.printStackTrace();
         }
     }
+
 
     
     public static void saveReceivedImage(byte[] imageData, String senderIP) {
@@ -275,10 +315,12 @@ public class Server extends JFrame {
                 return;
             }
 
+            // Get the Desktop directory dynamically
             String desktopPath = System.getProperty("user.home") + File.separator + "Desktop";
             String directoryPath = desktopPath + File.separator + "udp_received_images";
             File directory = new File(directoryPath);
 
+            // Check if the directory exists and create it if not
             if (!directory.exists()) {
                 if (directory.mkdirs()) {
                     System.out.println("Directory created at: " + directoryPath);
@@ -288,25 +330,25 @@ public class Server extends JFrame {
                 }
             }
 
-            
-            String sanitizedIP = senderIP.replace(".", "_"); 
+            // Generate a filename with the sender IP and timestamp
+            String sanitizedIP = senderIP.replace(".", "_"); // Replace dots with underscores for a valid filename
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             String filename = directoryPath + File.separator + "received_image_" + sanitizedIP + "_" + timestamp + ".png";
             File outputfile = new File(filename);
 
+            // Save the image
             ImageIO.write(receivedImage, "png", outputfile);
             System.out.println("Image saved at: " + outputfile.getAbsolutePath());
+            statpic="Image Saved succussfuly";
         } catch (Exception e) {
+        	statpic="Failed to save Image";
             e.printStackTrace();
         }
     }
 
 
-
-
-
-    
     public static void takeScreenshotAndSend(String ipAddress, int port) {
+        DatagramSocket socket = null;
         try {
             Robot robot = new Robot();
             Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
@@ -316,8 +358,8 @@ public class Server extends JFrame {
             ImageIO.write(screenshot, "png", baos);
             byte[] imageData = baos.toByteArray();
 
-            DatagramSocket socket = new DatagramSocket();
-            int packetSize = 64000;
+            socket = new DatagramSocket();
+            int packetSize = 8192; // 8 KB
             byte[] header = "IMG:".getBytes();
 
             // Send start signal
@@ -326,8 +368,8 @@ public class Server extends JFrame {
             socket.send(startPacket);
 
             // Send image data in chunks
-            for (int i = 0; i < imageData.length; i += packetSize) {
-                int length = Math.min(packetSize, imageData.length - i);
+            for (int i = 0; i < imageData.length; i += packetSize - header.length) {
+                int length = Math.min(packetSize - header.length, imageData.length - i);
                 byte[] dataChunk = new byte[header.length + length];
 
                 // Add header
@@ -337,6 +379,9 @@ public class Server extends JFrame {
 
                 DatagramPacket packet = new DatagramPacket(dataChunk, dataChunk.length, InetAddress.getByName(ipAddress), port);
                 socket.send(packet);
+
+                // Wait for 1 second before sending the next packet
+                Thread.sleep(150);
             }
 
             // Send end-of-image signal
@@ -345,10 +390,26 @@ public class Server extends JFrame {
             socket.send(endPacket);
 
             System.out.println("Screenshot sent successfully to " + ipAddress + ":" + port);
-            socket.close();
-        } catch (Exception e) {
+
+        } catch (UnknownHostException e) {
+            System.err.println("Error: Invalid IP address.");
             e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error: I/O exception during packet transmission.");
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            System.err.println("Error: Thread was interrupted.");
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("Error: An unexpected error occurred.");
+            e.printStackTrace();
+        } finally {
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+            }
         }
     }
+
+
 
 }

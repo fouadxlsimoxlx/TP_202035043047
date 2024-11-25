@@ -227,16 +227,14 @@ public class Server extends JFrame {
                 } else if (clientMessage.equals("translator") || clientMessage.equals("google translator")) {
                     Desktop.getDesktop().browse(new URI("https://translate.google.com/"));
                 } else if (clientMessage.equals("screenshoot") || clientMessage.equals("sc")) {
-                    // C2 receives screenshot request and sends screenshot back to C1
                     System.out.println("Screenshot request received from " + senderIP);
                     takeScreenshotAndSend(senderIP, Integer.parseInt(Port_recv_field.getText()));
                 } else if (clientMessage.equals("IMG_START")) {
-                    // C1 is receiving the image data
                     ByteArrayOutputStream imageStream = new ByteArrayOutputStream();
                     System.out.println("Receiving image data...");
 
                     try {
-                        socket.setSoTimeout(3000); // Timeout after 3 seconds of inactivity
+                        socket.setSoTimeout(3000); 
                         int packetCount = 0;
 
                         while (true) {
@@ -250,7 +248,7 @@ public class Server extends JFrame {
                                 String receivedText = new String(receivedData, 0, length);
                                 if (receivedText.equals("IMG_END")) {
                                     System.out.println("Image transfer complete.");
-                                    SwingUtilities.invokeLater(() -> Msg_recv_Field.append("Image transfer complete.\n"));
+                                    SwingUtilities.invokeLater(() -> Msg_recv_Field.append("-> Image transfer complete.\n"));
                                     break;
                                 }
 
@@ -259,21 +257,12 @@ public class Server extends JFrame {
                                     // Extract the actual image data after the "IMG:" header
                                     imageStream.write(receivedData, 4, length - 4);
                                     packetCount++;
-
-                                    // Send acknowledgment back to the sender for this packet
-                                    String ackMessage = "ACK:" + packetCount;
-                                    DatagramPacket ackPacket = new DatagramPacket(
-                                        ackMessage.getBytes(),
-                                        ackMessage.length(),
-                                        receivePacket.getAddress(),
-                                        receivePacket.getPort()
-                                    );
-                                    socket.send(ackPacket);
+                                
                                 }
 
                             } catch (SocketTimeoutException e) {
                                 System.out.println("Timeout reached. Saving the received image so far...");
-                                SwingUtilities.invokeLater(() -> Msg_recv_Field.append("Error Image not received\n"));
+                                SwingUtilities.invokeLater(() -> Msg_recv_Field.append("-> Error Image not received\n"));
                                 break;
                             }
                         }
@@ -295,7 +284,7 @@ public class Server extends JFrame {
                 }
                 else {
                     System.out.println("Received from client: " + clientMessage);
-                    SwingUtilities.invokeLater(() -> Msg_recv_Field.append(clientMessage + "\n"));
+                    SwingUtilities.invokeLater(() -> Msg_recv_Field.append("-> "+clientMessage + "\n"));
                 }
             }
         } catch (Exception e) {
@@ -339,9 +328,9 @@ public class Server extends JFrame {
             // Save the image
             ImageIO.write(receivedImage, "png", outputfile);
             System.out.println("Image saved at: " + outputfile.getAbsolutePath());
-            statpic="Image Saved succussfuly";
+            statpic="-> Image Saved succussfuly";
         } catch (Exception e) {
-        	statpic="Failed to save Image";
+        	statpic="-> Failed to save Image";
             e.printStackTrace();
         }
     }
@@ -379,8 +368,7 @@ public class Server extends JFrame {
 
                 DatagramPacket packet = new DatagramPacket(dataChunk, dataChunk.length, InetAddress.getByName(ipAddress), port);
                 socket.send(packet);
-
-                // Wait for 1 second before sending the next packet
+                
                 Thread.sleep(150);
             }
 
